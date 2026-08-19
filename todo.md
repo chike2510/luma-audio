@@ -17,4 +17,21 @@
 - [x] Add haptic and visual press feedback for primary controls
 - [x] Add deterministic unit tests for core state transitions and interaction logic
 - [x] Run type checking, linting, tests, and mobile preview verification
-- [ ] Create a public GitHub repository and commit the project
+- [x] Create a public GitHub repository and commit the project
+- [x] Persist projects locally with AsyncStorage and restore the latest session on launch
+- [x] Add editable clip state with select, trim, duplicate, split, and delete interactions
+- [x] Add native audio playback and beat/MIDI sequencing foundations
+- [x] Add the first real AI co-pilot action for generating an editable drum pattern
+- [x] Re-run quality checks and save a new checkpoint for the additions
+- [x] Add clip trim handles, split, fades, and a richer selected-clip action sheet
+- [x] Add editable beat pattern steps, pattern length, swing, velocity, and playable sequencing state
+- [ ] Add MIDI note editing, instrument selection, octave control, and quantization state
+- [x] Add an effects rack foundation with EQ, compression, reverb, delay, and master limiter controls
+- [x] Add export and stems flow foundation with format, quality, and destination choices
+- [ ] Add vocal cleanup and tuning workflow foundations
+- [ ] Expand AI co-producer actions with drum, bass, vocal, and mix suggestions
+- [x] Re-run quality checks, verify expanded flows, and save a checkpoint
+- [x] Prepare a responsive browser-optimized Luma Audio export for Vercel
+- [x] Add web-specific metadata and Vercel build configuration
+- [x] Verify web interactions, responsive layout, and production build readiness
+- [ ] Diagnose the reported Vercel deployment failure and apply a repository-side fix if available

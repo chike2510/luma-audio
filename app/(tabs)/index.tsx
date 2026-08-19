@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Pressable,
@@ -13,9 +13,12 @@ import {
   setAudioModeAsync,
   useAudioRecorder,
   useAudioRecorderState,
+  createAudioPlayer,
 } from "expo-audio";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import { ScreenContainer } from "@/components/screen-container";
+import { trpc } from "@/lib/trpc";
 
 const COLORS = {
   canvas: "#050816",
@@ -32,18 +35,22 @@ const COLORS = {
 
 type Tool = "Record" | "Beat" | "MIDI" | "Loops" | "Mix" | "AI";
 
+type Clip = { id: string; left: number; width: number; fadeIn?: boolean; fadeOut?: boolean };
+
 type Track = {
   id: string;
   name: string;
   type: "audio" | "drums" | "midi" | "loop";
   color: string;
-  clips: number[];
+  clips: Clip[];
 };
 
+type SavedStudio = { tracks: Track[]; bpm: number; isLooping: boolean };
+
 const initialTracks: Track[] = [
-  { id: "vox", name: "Vocal take", type: "audio", color: COLORS.violet, clips: [20, 48, 76] },
-  { id: "drums", name: "Neon kit", type: "drums", color: COLORS.cyan, clips: [8, 28, 48, 68, 88] },
-  { id: "bass", name: "Bass MIDI", type: "midi", color: "#F0ABFC", clips: [30, 60] },
+  { id: "vox", name: "Vocal take", type: "audio", color: COLORS.violet, clips: [{ id: "vox-1", left: 20, width: 7 }, { id: "vox-2", left: 48, width: 7 }, { id: "vox-3", left: 76, width: 7 }] },
+  { id: "drums", name: "Neon kit", type: "drums", color: COLORS.cyan, clips: [{ id: "drums-1", left: 8, width: 7 }, { id: "drums-2", left: 28, width: 7 }, { id: "drums-3", left: 48, width: 7 }, { id: "drums-4", left: 68, width: 7 }, { id: "drums-5", left: 88, width: 7 }] },
+  { id: "bass", name: "Bass MIDI", type: "midi", color: "#F0ABFC", clips: [{ id: "bass-1", left: 30, width: 10 }, { id: "bass-2", left: 60, width: 10 }] },
 ];
 
 const toolMeta: Record<Tool, { eyebrow: string; title: string; hint: string }> = {
@@ -62,12 +69,34 @@ export default function HomeScreen() {
   const [isLooping, setIsLooping] = useState(false);
   const [bpm, setBpm] = useState(118);
   const [recordedUri, setRecordedUri] = useState<string | null>(null);
+  const [aiRationale, setAiRationale] = useState<string | null>(null);
+  const aiPattern = trpc.ai.generateDrumPattern.useMutation();
+  const [selectedClip, setSelectedClip] = useState<{ trackId: string; clipId: string } | null>(null);
+  const [beatSteps, setBeatSteps] = useState<boolean[]>([true, false, false, true, true, false, true, false, true, false, false, true, true, false, true, false]);
+  const [isSequencing, setIsSequencing] = useState(false);
+  const [exportQuality, setExportQuality] = useState("WAV 24-BIT");
+  const [masterEffects, setMasterEffects] = useState({ eq: true, compression: false, reverb: true, delay: false, limiter: true });
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  const playbackRef = useRef<ReturnType<typeof createAudioPlayer> | null>(null);
   const recorderState = useAudioRecorderState(recorder);
 
   useEffect(() => {
     void setAudioModeAsync({ playsInSilentMode: true, allowsRecording: true });
+    void AsyncStorage.getItem("luma-audio:studio").then((raw) => {
+      if (!raw) return;
+      try {
+        const saved = JSON.parse(raw) as SavedStudio;
+        setTracks(saved.tracks);
+        setBpm(saved.bpm);
+        setIsLooping(saved.isLooping);
+      } catch {}
+    });
+    return () => playbackRef.current?.remove();
   }, []);
+
+  useEffect(() => {
+    void AsyncStorage.setItem("luma-audio:studio", JSON.stringify({ tracks, bpm, isLooping } satisfies SavedStudio));
+  }, [tracks, bpm, isLooping]);
 
   const isRecording = recorderState.isRecording;
   const timelineLabel = useMemo(() => (isPlaying ? "00:12.4" : "00:00.0"), [isPlaying]);
@@ -75,8 +104,52 @@ export default function HomeScreen() {
   const addTrack = (type: Track["type"], name: string, color: string) => {
     setTracks((current) => [
       ...current,
-      { id: `${type}-${Date.now()}`, name, type, color, clips: [18, 48, 78] },
+      { id: `${type}-${Date.now()}`, name, type, color, clips: [18, 48, 78].map((left, index) => ({ id: `${type}-${Date.now()}-${index}`, left, width: 7 })) },
     ]);
+  };
+
+  const deleteSelectedClip = () => {
+    if (!selectedClip) return;
+    setTracks((current) => current.map((track) => track.id === selectedClip.trackId ? { ...track, clips: track.clips.filter((clip) => clip.id !== selectedClip.clipId) } : track));
+    setSelectedClip(null);
+  };
+
+  const trimSelectedClip = () => {
+    if (!selectedClip) return;
+    setTracks((current) => current.map((track) => track.id === selectedClip.trackId ? { ...track, clips: track.clips.map((clip) => clip.id === selectedClip.clipId ? { ...clip, left: clip.left + 2, width: Math.max(3, clip.width - 3) } : clip) } : track));
+  };
+
+  const splitSelectedClip = () => {
+    if (!selectedClip) return;
+    setTracks((current) => current.map((track) => {
+      if (track.id !== selectedClip.trackId) return track;
+      const clip = track.clips.find((item) => item.id === selectedClip.clipId);
+      if (!clip) return track;
+      const half = Math.max(2, clip.width / 2 - 1);
+      return { ...track, clips: track.clips.flatMap((item) => item.id === clip.id ? [{ ...item, width: half }, { ...item, id: `${item.id}-split`, left: item.left + half + 1, width: half }] : [item]) };
+    }));
+  };
+
+  const toggleFadeSelectedClip = (side: "fadeIn" | "fadeOut") => {
+    if (!selectedClip) return;
+    setTracks((current) => current.map((track) => track.id === selectedClip.trackId ? { ...track, clips: track.clips.map((clip) => clip.id === selectedClip.clipId ? { ...clip, [side]: !clip[side] } : clip) } : track));
+  };
+
+  const duplicateSelectedClip = () => {
+    if (!selectedClip) return;
+    setTracks((current) => current.map((track) => {
+      if (track.id !== selectedClip.trackId) return track;
+      const clip = track.clips.find((item) => item.id === selectedClip.clipId);
+      return clip ? { ...track, clips: [...track.clips, { ...clip, id: `${clip.id}-copy`, left: Math.min(92, clip.left + clip.width + 2) }] } : track;
+    }));
+  };
+
+  const playRecordedTake = () => {
+    if (!recordedUri) return;
+    playbackRef.current?.remove();
+    const player = createAudioPlayer({ uri: recordedUri });
+    playbackRef.current = player;
+    player.play();
   };
 
   const handleRecord = async () => {
@@ -97,11 +170,15 @@ export default function HomeScreen() {
     recorder.record();
   };
 
-  const handleToolAction = (action: string) => {
+  const handleToolAction = async (action: string) => {
     if (action === "Add pattern") addTrack("drums", "Pattern 01", COLORS.cyan);
     if (action === "Add MIDI") addTrack("midi", "MIDI idea", "#F0ABFC");
     if (action === "Add loop") addTrack("loop", "Midnight texture", "#FDE68A");
-    if (action === "Apply suggestion") addTrack("midi", "AI suggestion", COLORS.violet);
+    if (action === "Apply suggestion") {
+      const result = await aiPattern.mutateAsync({ mood: "darker, spacious chorus", bpm, key: "F minor" });
+      setAiRationale(result.rationale);
+      addTrack("drums", result.name || "Luma drum pattern", COLORS.violet);
+    }
   };
 
   return (
@@ -112,9 +189,9 @@ export default function HomeScreen() {
           <View>
             <Text style={styles.overline}>LUMA AUDIO / STUDIO</Text>
             <Text style={styles.projectName}>Midnight Bloom</Text>
-            <Text style={styles.projectMeta}>Saved just now · 118 BPM · F minor</Text>
+            <Text style={styles.projectMeta}>Saved just now · 118 BPM · F minor · {exportQuality}</Text>
           </View>
-          <Pressable style={styles.menuButton} onPress={() => Alert.alert("Project settings", "Project details and export controls will live here.")}>
+          <Pressable style={styles.menuButton} onPress={() => Alert.alert("Export project", "Choose a format for the final mix or individual stems.", [{ text: "WAV 24-bit", onPress: () => setExportQuality("WAV 24-BIT") }, { text: "MP3 320 kbps", onPress: () => setExportQuality("MP3 320 KBPS") }, { text: "Cancel", style: "cancel" }])}>
             <Text style={styles.menuDots}>•••</Text>
           </Pressable>
         </View>
@@ -138,10 +215,10 @@ export default function HomeScreen() {
           {tracks.map((track) => (
             <View key={track.id} style={styles.trackRow}>
               <View style={styles.trackInfo}><View style={[styles.trackSwatch, { backgroundColor: track.color }]} /><View><Text style={styles.trackName}>{track.name}</Text><Text style={styles.trackType}>{track.type.toUpperCase()}</Text></View></View>
-              <View style={styles.clipRail}>{track.clips.map((left, index) => <View key={`${track.id}-${index}`} style={[styles.clip, { left: `${left}%`, backgroundColor: track.color }]}><View style={styles.clipWave} /><View style={styles.clipWave} /><View style={styles.clipWave} /></View>)}</View>
+              <View style={styles.clipRail}>{track.clips.map((clip) => <Pressable key={clip.id} onPress={() => setSelectedClip({ trackId: track.id, clipId: clip.id })} style={[styles.clip, selectedClip?.clipId === clip.id && styles.clipSelected, { left: `${clip.left}%`, width: `${clip.width}%`, backgroundColor: track.color }]}><View style={styles.clipWave} /><View style={styles.clipWave} /><View style={styles.clipWave} /></Pressable>)}</View>
             </View>
           ))}
-          <Pressable style={styles.addTrack} onPress={() => addTrack("audio", "Empty audio lane", COLORS.muted)}><Text style={styles.addTrackPlus}>＋</Text><Text style={styles.addTrackText}>Add a track</Text></Pressable>
+          <Pressable style={styles.addTrack} onPress={() => addTrack("audio", "Empty audio lane", COLORS.muted)}><Text style={styles.addTrackPlus}>＋</Text><Text style={styles.addTrackText}>Add a track</Text></Pressable>{selectedClip && <View style={styles.clipActions}><Text style={styles.clipActionLabel}>CLIP SELECTED</Text><Pressable onPress={trimSelectedClip}><Text style={styles.clipActionText}>Trim</Text></Pressable><Pressable onPress={splitSelectedClip}><Text style={styles.clipActionText}>Split</Text></Pressable><Pressable onPress={() => toggleFadeSelectedClip("fadeIn")}><Text style={styles.clipActionText}>Fade in</Text></Pressable><Pressable onPress={duplicateSelectedClip}><Text style={styles.clipActionText}>Duplicate</Text></Pressable><Pressable onPress={deleteSelectedClip}><Text style={[styles.clipActionText, { color: COLORS.red }]}>Delete</Text></Pressable></View>}
         </View>
 
         <View style={styles.transport}>
@@ -158,12 +235,12 @@ export default function HomeScreen() {
         <View style={styles.drawer}>
           <View style={styles.drawerHandle} />
           <View style={styles.drawerHeader}><View><Text style={styles.sectionEyebrow}>{toolMeta[activeTool].eyebrow}</Text><Text style={styles.drawerTitle}>{toolMeta[activeTool].title}</Text></View><Text style={styles.drawerHint}>{toolMeta[activeTool].hint}</Text></View>
-          {activeTool === "Record" && <RecordPanel isRecording={isRecording} onRecord={handleRecord} recordedUri={recordedUri} />}
-          {activeTool === "Beat" && <BeatPanel onAction={handleToolAction} />}
+          {activeTool === "Record" && <RecordPanel isRecording={isRecording} onRecord={handleRecord} recordedUri={recordedUri} onPlay={playRecordedTake} />}
+          {activeTool === "Beat" && <BeatPanel onAction={handleToolAction} steps={beatSteps} onToggleStep={(index) => setBeatSteps((current) => current.map((value, step) => step === index ? !value : value))} isSequencing={isSequencing} onSequence={() => setIsSequencing((value) => !value)} />}
           {activeTool === "MIDI" && <MidiPanel onAction={handleToolAction} />}
           {activeTool === "Loops" && <LoopsPanel onAction={handleToolAction} />}
-          {activeTool === "Mix" && <MixPanel />}
-          {activeTool === "AI" && <AiPanel onAction={handleToolAction} />}
+          {activeTool === "Mix" && <MixPanel effects={masterEffects} onToggle={(effect) => setMasterEffects((current) => ({ ...current, [effect]: !current[effect as keyof typeof current] }))} />}
+          {activeTool === "AI" && <AiPanel onAction={handleToolAction} isGenerating={aiPattern.isPending} rationale={aiRationale} />}
         </View>
         </ScrollView>
       </View>
@@ -171,12 +248,12 @@ export default function HomeScreen() {
   );
 }
 
-function RecordPanel({ isRecording, onRecord, recordedUri }: { isRecording: boolean; onRecord: () => void; recordedUri: string | null }) {
-  return <View><View style={styles.levelRow}><Text style={styles.label}>INPUT 01 · BUILT-IN MIC</Text><Text style={styles.label}>−18 dB</Text></View><View style={styles.meter}><View style={[styles.meterFill, { width: isRecording ? "62%" : "28%" }]} /><View style={styles.meterPeak} /></View><View style={styles.optionRow}><View><Text style={styles.optionTitle}>Input monitoring</Text><Text style={styles.optionSub}>Hear yourself while recording</Text></View><View style={styles.toggle}><View style={styles.toggleKnob} /></View><View style={styles.countCard}><Text style={styles.countValue}>1</Text><Text style={styles.countLabel}>BAR COUNT-IN</Text></View></View><Pressable style={[styles.primaryAction, isRecording && styles.primaryActionRecording]} onPress={onRecord}><Text style={styles.primaryActionText}>{isRecording ? "Stop & keep take" : "Record a new take"}</Text><Text style={styles.primaryActionIcon}>{isRecording ? "■" : "●"}</Text></Pressable>{recordedUri && <Text style={styles.savedNote}>Take added to timeline · ready to edit</Text>}</View>;
+function RecordPanel({ isRecording, onRecord, recordedUri, onPlay }: { isRecording: boolean; onRecord: () => void; recordedUri: string | null; onPlay: () => void }) {
+  return <View><View style={styles.levelRow}><Text style={styles.label}>INPUT 01 · BUILT-IN MIC</Text><Text style={styles.label}>−18 dB</Text></View><View style={styles.meter}><View style={[styles.meterFill, { width: isRecording ? "62%" : "28%" }]} /><View style={styles.meterPeak} /></View><View style={styles.optionRow}><View><Text style={styles.optionTitle}>Input monitoring</Text><Text style={styles.optionSub}>Hear yourself while recording</Text></View><View style={styles.toggle}><View style={styles.toggleKnob} /></View><View style={styles.countCard}><Text style={styles.countValue}>1</Text><Text style={styles.countLabel}>BAR COUNT-IN</Text></View></View><Pressable style={[styles.primaryAction, isRecording && styles.primaryActionRecording]} onPress={onRecord}><Text style={styles.primaryActionText}>{isRecording ? "Stop & keep take" : "Record a new take"}</Text><Text style={styles.primaryActionIcon}>{isRecording ? "■" : "●"}</Text></Pressable>{recordedUri && <View style={styles.savedRow}><Text style={styles.savedNote}>Take added to timeline · ready to edit</Text><Pressable onPress={onPlay}><Text style={styles.playTake}>Play take</Text></Pressable></View>}</View>;
 }
 
-function BeatPanel({ onAction }: { onAction: (action: string) => void }) {
-  return <View><View style={styles.padGrid}>{["KICK", "SNARE", "HAT", "CLAP", "808", "RIM", "OPEN", "FX"].map((pad, index) => <Pressable key={pad} onPress={() => onAction(index === 0 ? "Add pattern" : "Pad tapped")} style={[styles.pad, index === 0 && styles.padAccent]}><Text style={styles.padLabel}>{pad}</Text><Text style={styles.padNumber}>0{index + 1}</Text></Pressable>)}</View><View style={styles.patternRow}><Text style={styles.label}>PATTERN 01 · 2 BARS</Text><Text style={styles.label}>SWING 54%</Text></View><View style={styles.stepGrid}>{Array.from({ length: 16 }).map((_, index) => <View key={index} style={[styles.step, [0, 3, 4, 8, 10, 12].includes(index) && styles.stepOn]} />)}</View><Pressable style={styles.secondaryAction} onPress={() => onAction("Add pattern")}><Text style={styles.secondaryActionText}>Add pattern to timeline</Text><Text style={styles.secondaryActionIcon}>＋</Text></Pressable></View>;
+function BeatPanel({ onAction, steps, onToggleStep, isSequencing, onSequence }: { onAction: (action: string) => void; steps: boolean[]; onToggleStep: (index: number) => void; isSequencing: boolean; onSequence: () => void }) {
+  return <View><View style={styles.padGrid}>{["KICK", "SNARE", "HAT", "CLAP", "808", "RIM", "OPEN", "FX"].map((pad, index) => <Pressable key={pad} onPress={() => onAction(index === 0 ? "Add pattern" : "Pad tapped")} style={[styles.pad, index === 0 && styles.padAccent]}><Text style={styles.padLabel}>{pad}</Text><Text style={styles.padNumber}>0{index + 1}</Text></Pressable>)}</View><View style={styles.patternRow}><Text style={styles.label}>PATTERN 01 · 2 BARS</Text><Text style={styles.label}>SWING 54%</Text></View><View style={styles.stepGrid}>{steps.map((on, index) => <Pressable key={index} onPress={() => onToggleStep(index)} style={[styles.step, on && styles.stepOn]} />)}</View><View style={styles.sequenceRow}><Pressable onPress={onSequence} style={[styles.sequenceButton, isSequencing && styles.sequenceButtonActive]}><Text style={styles.sequenceText}>{isSequencing ? "Stop sequencer" : "Play pattern"}</Text></Pressable><Text style={styles.sequenceMeta}>16 STEPS · VELOCITY EDITABLE</Text></View><Pressable style={styles.secondaryAction} onPress={() => onAction("Add pattern")}><Text style={styles.secondaryActionText}>Add pattern to timeline</Text><Text style={styles.secondaryActionIcon}>＋</Text></Pressable></View>;
 }
 
 function MidiPanel({ onAction }: { onAction: (action: string) => void }) {
@@ -187,12 +264,12 @@ function LoopsPanel({ onAction }: { onAction: (action: string) => void }) {
   return <View><View style={styles.filterRow}>{["All", "Drums", "Bass", "Textures"].map((filter, index) => <Pressable key={filter} style={[styles.filterChip, index === 0 && styles.filterChipActive]}><Text style={[styles.filterText, index === 0 && styles.filterTextActive]}>{filter}</Text></Pressable>)}</View><View style={styles.loopItem}><View style={[styles.loopArt, { backgroundColor: "#312E81" }]}><Text style={styles.loopArtText}>✦</Text></View><View style={styles.loopCopy}><Text style={styles.loopName}>Midnight texture</Text><Text style={styles.loopMeta}>Atmosphere · 118 BPM · F min</Text></View><Pressable style={styles.previewButton} onPress={() => onAction("Preview loop")}><Text style={styles.previewText}>▶</Text></Pressable><Pressable style={styles.addButton} onPress={() => onAction("Add loop")}><Text style={styles.addButtonText}>＋</Text></Pressable></View><View style={styles.loopItem}><View style={[styles.loopArt, { backgroundColor: "#164E63" }]}><Text style={styles.loopArtText}>∿</Text></View><View style={styles.loopCopy}><Text style={styles.loopName}>Glass keys</Text><Text style={styles.loopMeta}>MIDI · 118 BPM · F min</Text></View><Pressable style={styles.previewButton} onPress={() => onAction("Preview loop")}><Text style={styles.previewText}>▶</Text></Pressable><Pressable style={styles.addButton} onPress={() => onAction("Add loop")}><Text style={styles.addButtonText}>＋</Text></Pressable></View></View>;
 }
 
-function MixPanel() {
-  return <View><View style={styles.mixStrip}>{["VOCAL", "DRUMS", "BASS", "MASTER"].map((name, index) => <View key={name} style={styles.mixChannel}><View style={styles.mixMeter}><View style={[styles.mixMeterFill, { height: `${36 + index * 12}%`, backgroundColor: index === 3 ? COLORS.cyan : COLORS.violet }]} /></View><View style={styles.fader}><View style={[styles.faderKnob, { bottom: `${38 + index * 7}%` }]} /></View><Text style={styles.mixName}>{name}</Text></View>)}</View><View style={styles.mixFooter}><Text style={styles.label}>MASTER PEAK −3.2 dB</Text><Text style={styles.mixDetail}>Open advanced mix</Text></View></View>;
+function MixPanel({ effects, onToggle }: { effects: Record<string, boolean>; onToggle: (effect: keyof typeof effects) => void }) {
+  return <View><View style={styles.mixStrip}>{["VOCAL", "DRUMS", "BASS", "MASTER"].map((name, index) => <View key={name} style={styles.mixChannel}><View style={styles.mixMeter}><View style={[styles.mixMeterFill, { height: `${36 + index * 12}%`, backgroundColor: index === 3 ? COLORS.cyan : COLORS.violet }]} /></View><View style={styles.fader}><View style={[styles.faderKnob, { bottom: `${38 + index * 7}%` }]} /></View><Text style={styles.mixName}>{name}</Text></View>)}</View><View style={styles.effectGrid}>{Object.keys(effects).map((effect) => <Pressable key={effect} onPress={() => onToggle(effect)} style={[styles.effectChip, effects[effect] && styles.effectChipActive]}><Text style={[styles.effectText, effects[effect] && styles.effectTextActive]}>{effect.toUpperCase()}</Text></Pressable>)}</View><View style={styles.mixFooter}><Text style={styles.label}>MASTER PEAK −3.2 dB</Text><Text style={styles.mixDetail}>EXPORT / STEMS</Text></View></View>;
 }
 
-function AiPanel({ onAction }: { onAction: (action: string) => void }) {
-  return <View><View style={styles.aiPrompt}><Text style={styles.aiSpark}>✦</Text><Text style={styles.aiPromptText}>Ask Luma to help shape this session</Text><Text style={styles.aiArrow}>↗</Text></View><View style={styles.suggestionRow}>{["Make a darker chorus", "Find a bassline", "Clean vocal take"].map((suggestion) => <Pressable key={suggestion} style={styles.suggestionChip} onPress={() => onAction("Apply suggestion")}><Text style={styles.suggestionText}>{suggestion}</Text></Pressable>)}</View><View style={styles.aiNote}><Text style={styles.aiNoteTitle}>NON-DESTRUCTIVE BY DESIGN</Text><Text style={styles.aiNoteCopy}>Luma previews every change and adds the result as an editable layer. Your original stays untouched.</Text></View></View>;
+function AiPanel({ onAction, isGenerating, rationale }: { onAction: (action: string) => void; isGenerating: boolean; rationale: string | null }) {
+  return <View><View style={styles.aiPrompt}><Text style={styles.aiSpark}>✦</Text><Text style={styles.aiPromptText}>Ask Luma to help shape this session</Text><Text style={styles.aiArrow}>{isGenerating ? "…" : "↗"}</Text></View><View style={styles.suggestionRow}>{["Make a darker chorus", "Find a bassline", "Clean vocal take"].map((suggestion) => <Pressable key={suggestion} style={styles.suggestionChip} onPress={() => onAction("Apply suggestion")}><Text style={styles.suggestionText}>{suggestion}</Text></Pressable>)}</View>{rationale && <View style={styles.aiResult}><Text style={styles.aiResultTitle}>LUMA SUGGESTS</Text><Text style={styles.aiResultCopy}>{rationale}</Text></View>}<View style={styles.aiNote}><Text style={styles.aiNoteTitle}>NON-DESTRUCTIVE BY DESIGN</Text><Text style={styles.aiNoteCopy}>Luma previews every change and adds the result as an editable layer. Your original stays untouched.</Text></View></View>;
 }
 
 const styles = StyleSheet.create({
@@ -231,8 +308,14 @@ const styles = StyleSheet.create({
   trackName: { color: COLORS.text, fontSize: 10, fontWeight: "700", maxWidth: 68 },
   trackType: { color: COLORS.muted, fontSize: 8, marginTop: 2, letterSpacing: 0.7 },
   clipRail: { flex: 1, height: 34, position: "relative", backgroundColor: "#091127", borderRadius: 9, overflow: "hidden" },
-  clip: { position: "absolute", top: 5, height: 24, width: 38, borderRadius: 6, opacity: 0.78, flexDirection: "row", alignItems: "center", paddingHorizontal: 5, gap: 3 },
+  clip: { position: "absolute", top: 5, height: 24, borderRadius: 6, opacity: 0.78, flexDirection: "row", alignItems: "center", paddingHorizontal: 5, gap: 3 },
+  clipSelected: { borderWidth: 2, borderColor: COLORS.text, opacity: 1 },
   clipWave: { flex: 1, height: 10, borderTopWidth: 1, borderBottomWidth: 1, borderColor: "rgba(255,255,255,0.55)" },
+  clipActions: { flexDirection: "row", alignItems: "center", gap: 14, borderTopWidth: 1, borderTopColor: COLORS.border, marginTop: 10, paddingTop: 10 },
+  clipActionLabel: { color: COLORS.muted, fontSize: 8, fontWeight: "800", letterSpacing: 0.8, marginRight: "auto" },
+  clipActionText: { color: COLORS.cyan, fontSize: 10, fontWeight: "800" },
+  savedRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 12, marginTop: 12 },
+  playTake: { color: COLORS.cyan, fontSize: 10, fontWeight: "800" },
   addTrack: { borderTopWidth: 1, borderTopColor: "#18213A", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingTop: 12 },
   addTrackPlus: { color: COLORS.cyan, fontSize: 18 },
   addTrackText: { color: COLORS.muted, fontSize: 11, fontWeight: "700" },
@@ -284,6 +367,11 @@ const styles = StyleSheet.create({
   stepGrid: { flexDirection: "row", gap: 4 },
   step: { flex: 1, height: 22, backgroundColor: COLORS.surfaceRaised, borderRadius: 4, borderWidth: 1, borderColor: COLORS.border },
   stepOn: { backgroundColor: COLORS.cyan, borderColor: COLORS.cyan },
+  sequenceRow: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 14 },
+  sequenceButton: { borderRadius: 10, backgroundColor: COLORS.surfaceRaised, borderWidth: 1, borderColor: COLORS.border, paddingHorizontal: 12, paddingVertical: 9 },
+  sequenceButtonActive: { backgroundColor: "#20103B", borderColor: COLORS.violet },
+  sequenceText: { color: COLORS.text, fontSize: 10, fontWeight: "800" },
+  sequenceMeta: { color: COLORS.muted, fontSize: 8, fontWeight: "700" },
   secondaryAction: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 14, marginTop: 16, borderTopWidth: 1, borderTopColor: COLORS.border },
   secondaryActionText: { color: COLORS.text, fontSize: 12, fontWeight: "700" },
   secondaryActionIcon: { color: COLORS.cyan, fontSize: 20 },
@@ -315,6 +403,11 @@ const styles = StyleSheet.create({
   fader: { height: 66, width: 2, backgroundColor: COLORS.border, marginTop: 7, position: "relative" },
   faderKnob: { position: "absolute", width: 16, height: 7, left: -7, borderRadius: 4, backgroundColor: COLORS.text },
   mixName: { color: COLORS.muted, fontSize: 8, fontWeight: "800", marginTop: 8 },
+  effectGrid: { flexDirection: "row", flexWrap: "wrap", gap: 7, marginTop: 16, paddingTop: 12, borderTopWidth: 1, borderTopColor: COLORS.border },
+  effectChip: { borderRadius: 9, borderWidth: 1, borderColor: COLORS.border, paddingHorizontal: 9, paddingVertical: 7 },
+  effectChipActive: { backgroundColor: "#20103B", borderColor: COLORS.violet },
+  effectText: { color: COLORS.muted, fontSize: 9, fontWeight: "800" },
+  effectTextActive: { color: COLORS.violet },
   mixFooter: { flexDirection: "row", justifyContent: "space-between", borderTopWidth: 1, borderTopColor: COLORS.border, marginTop: 14, paddingTop: 13 },
   mixDetail: { color: COLORS.cyan, fontSize: 10, fontWeight: "700" },
   aiPrompt: { flexDirection: "row", alignItems: "center", backgroundColor: COLORS.surfaceRaised, borderRadius: 14, borderWidth: 1, borderColor: COLORS.border, padding: 13, gap: 9 },
@@ -324,6 +417,9 @@ const styles = StyleSheet.create({
   suggestionRow: { flexDirection: "row", gap: 7, marginTop: 12, flexWrap: "wrap" },
   suggestionChip: { borderRadius: 10, borderWidth: 1, borderColor: COLORS.border, paddingHorizontal: 10, paddingVertical: 8 },
   suggestionText: { color: COLORS.text, fontSize: 9, fontWeight: "700" },
+  aiResult: { marginTop: 14, padding: 12, backgroundColor: "#20103B", borderRadius: 12, borderWidth: 1, borderColor: COLORS.violet },
+  aiResultTitle: { color: COLORS.violet, fontSize: 8, fontWeight: "800", letterSpacing: 1 },
+  aiResultCopy: { color: COLORS.text, fontSize: 10, lineHeight: 15, marginTop: 5 },
   aiNote: { marginTop: 15, padding: 12, backgroundColor: "#0A1C24", borderRadius: 12, borderWidth: 1, borderColor: "#124759" },
   aiNoteTitle: { color: COLORS.cyan, fontSize: 8, fontWeight: "800", letterSpacing: 1 },
   aiNoteCopy: { color: COLORS.muted, fontSize: 10, lineHeight: 15, marginTop: 5 },
