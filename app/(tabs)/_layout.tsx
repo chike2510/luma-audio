@@ -1,38 +1,15 @@
 import { Tabs } from "expo-router";
+import { Platform, Text } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-
 import { HapticTab } from "@/components/haptic-tab";
-import { IconSymbol } from "@/components/ui/icon-symbol";
-import { Platform } from "react-native";
+import { LUMA } from "@/components/luma-primitives";
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
   const bottomPadding = Platform.OS === "web" ? 12 : Math.max(insets.bottom, 8);
-  const tabBarHeight = 56 + bottomPadding;
-
-  return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: "#A855F7",
-        headerShown: false,
-        tabBarButton: HapticTab,
-        tabBarStyle: {
-          paddingTop: 8,
-          paddingBottom: bottomPadding,
-          height: tabBarHeight,
-          backgroundColor: "#050816",
-          borderTopColor: "#1F2B4A",
-          borderTopWidth: 0.5,
-        },
-      }}
-    >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: "Home",
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
-        }}
-      />
-    </Tabs>
-  );
+  return <Tabs screenOptions={{ headerShown: false, tabBarActiveTintColor: LUMA.violet, tabBarInactiveTintColor: LUMA.muted, tabBarButton: HapticTab, tabBarStyle: { paddingTop: 8, paddingBottom: bottomPadding, height: 56 + bottomPadding, backgroundColor: LUMA.canvas, borderTopColor: LUMA.border, borderTopWidth: 0.5 }, tabBarLabelStyle: { fontSize: 10, fontWeight: "800" } }}>
+    <Tabs.Screen name="index" options={{ title: "Home", tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 17 }}>⌂</Text> }} />
+    <Tabs.Screen name="library" options={{ title: "Library", tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 17 }}>≋</Text> }} />
+    <Tabs.Screen name="settings" options={{ title: "Settings", tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 17 }}>⚙</Text> }} />
+  </Tabs>;
 }
