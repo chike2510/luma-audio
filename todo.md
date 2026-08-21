@@ -65,3 +65,12 @@
 - [x] Validate upload, timeline, responsive layout, lint, tests, and preview behavior
 - [x] Adopt GitHub-first delivery: synchronize every completed work batch after validation, while retaining managed checkpoints for recovery
 - [x] Synchronize the current visual and instrumental-import milestone to the public GitHub repository
+- [ ] Diagnose why luma-audio-azure.vercel.app serves the unrelated Elias interface
+- [ ] Ensure the intended Vercel project/domain serves the Luma Audio build
+- [ ] Rebuild the Home, New Project, Studio, Recording, Beat, MIDI, Loops, Mixer, AI, Export, and Settings screens to match the approved board structure more closely
+- [ ] Validate visual fidelity at mobile width and synchronize corrected work to GitHub
+- [x] Rebuild the Luma Audio Projects screen to match the approved board layout and controls
+- [x] Rebuild the New Project screen to match project setup fields and project-type choices
+- [x] Rebuild the Unified Studio, Recording, Beat, MIDI, Loops, Mixer, AI, Export, and Settings screens to match the board
+- [x] Validate screen-to-screen navigation and responsive visual fidelity against the board
+- [ ] Synchronize the corrected Luma Audio build to GitHub and verify the Vercel deployment

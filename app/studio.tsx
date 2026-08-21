@@ -227,15 +227,16 @@ export default function HomeScreen() {
     <ScreenContainer edges={["top", "left", "right", "bottom"]} containerClassName="bg-[#050816]" safeAreaClassName="bg-[#050816]">
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <View>
-            <Text style={styles.overline}>LUMA AUDIO / FUNCTIONAL STUDIO</Text>
-            <Text style={styles.title}>Untitled session</Text>
-            <Text style={styles.meta}>{saveState === "saving" ? "Saving project…" : saveState === "error" ? "Save needs attention" : "Saved locally"} · {project.bpm} BPM · microphone + beat engine</Text>
+          <Pressable style={styles.headerIcon}><Text style={styles.headerIconText}>‹</Text></Pressable>
+          <View style={styles.headerCenter}>
+            <Text style={styles.overline}>LUMA AUDIO / STUDIO</Text>
+            <Text style={styles.title}>Midnight Bloom⌄</Text>
+            <Text style={styles.meta}>{saveState === "saving" ? "Saving project…" : saveState === "error" ? "Save needs attention" : "Saved locally"} · {project.bpm} BPM · F minor</Text>
           </View>
-          <View style={styles.liveBadge}><View style={styles.liveDot} /><Text style={styles.liveText}>{isRecording ? "RECORDING" : "READY"}</Text></View>
+          <Pressable style={styles.headerIcon}><Text style={styles.headerIconText}>•••</Text></Pressable>
         </View>
 
-        <View style={styles.notice}><Text style={styles.noticeIcon}>✓</Text><Text style={styles.noticeText}>This build focuses on real recording and audible beats. MIDI, AI, and mixing are intentionally not enabled yet.</Text></View>
+        <View style={styles.notice}><Text style={styles.noticeIcon}>●</Text><Text style={styles.noticeText}>REAL AUDIO WORKSPACE</Text><Text style={styles.noticeHint}>Record or upload a source to begin.</Text></View>
 
         <View style={styles.transport}>
           <Pressable onPress={() => isBeatPlaying ? stopBeat() : startBeat()} style={({ pressed }) => [styles.transportButton, pressed && styles.pressed]}><Text style={styles.transportIcon}>{isBeatPlaying ? "■" : "▶"}</Text><Text style={styles.transportLabel}>{isBeatPlaying ? "Stop" : "Play beat"}</Text></Pressable>
@@ -244,10 +245,11 @@ export default function HomeScreen() {
         </View>
 
         <View style={styles.timelineCard}>
-          <View style={styles.sectionHeader}><View><Text style={styles.eyebrow}>ARRANGEMENT</Text><Text style={styles.sectionTitle}>One timeline, real sources</Text></View><Text style={styles.timecode}>{project.clips.length ? `${project.clips.reduce((sum, clip) => sum + clip.duration, 0)}s` : "empty"}</Text></View>
+          <View style={styles.sectionHeader}><View><Text style={styles.eyebrow}>SONG TIMELINE</Text><Text style={styles.sectionTitle}>{project.clips.length ? "Midnight Bloom" : "One timeline, real sources"}</Text></View><Text style={styles.timecode}>{project.clips.length ? `${project.clips.reduce((sum, clip) => sum + clip.duration, 0)}s` : "00:00.0"}</Text></View>
           <View style={styles.timelineRuler}>{["1", "2", "3", "4", "5", "6", "7", "8"].map((bar) => <Text key={bar} style={styles.rulerText}>{bar}</Text>)}</View>
           <View style={styles.lane}><View style={styles.laneLabel}><Text style={styles.laneName}>AUDIO</Text><Text style={styles.laneHint}>{project.clips.length ? `${project.clips.length} take${project.clips.length > 1 ? "s" : ""}` : "No takes yet"}</Text></View><View style={styles.laneContent}>{project.clips.map((clip) => <Pressable key={clip.id} onPress={() => setSelectedClipId(clip.id)} style={[styles.clip, selectedClipId === clip.id && styles.clipSelected]}><Text style={styles.clipName}>{clip.name}</Text><Text style={styles.clipSource}>{clip.source === "instrumental" ? "INSTRUMENTAL" : "TAKE"}</Text><View style={styles.waveform}>{clip.waveform.map((height, index) => <View key={index} style={[styles.waveBar, { height: `${height * 100}%` }]} />)}</View></Pressable>)}</View></View>
-          <View style={styles.lane}><View style={styles.laneLabel}><Text style={styles.laneName}>BEAT</Text><Text style={styles.laneHint}>{project.steps.filter(Boolean).length} active steps</Text></View><View style={styles.beatLane}>{project.steps.map((step, index) => <View key={index} style={[styles.beatBlock, step && styles.beatBlockActive]} />)}</View></View>
+          <View style={styles.lane}><View style={styles.laneLabel}><Text style={styles.laneName}>DRUMS</Text><Text style={styles.laneHint}>Pattern 01</Text></View><View style={styles.beatLane}>{project.steps.map((step, index) => <View key={index} style={[styles.beatBlock, step && styles.beatBlockActive]} />)}</View></View>
+          <View style={styles.lane}><View style={styles.laneLabel}><Text style={styles.laneName}>BASS</Text><Text style={styles.laneHint}>MIDI · later</Text></View><View style={styles.emptyLane}><Text style={styles.emptyLaneText}>Add MIDI track</Text></View></View>
           {selectedClip && <View style={styles.clipActions}><Text style={styles.selectedLabel}>{selectedClip.name} SELECTED</Text><Pressable onPress={() => playClip(selectedClip)} style={styles.actionButton}><Text style={styles.actionText}>{playingClipId === selectedClip.id ? "Playing" : "Play"}</Text></Pressable><Pressable onPress={trimClip} style={styles.actionButton}><Text style={styles.actionText}>Trim 1s</Text></Pressable><Pressable onPress={deleteClip} style={[styles.actionButton, styles.deleteButton]}><Text style={styles.deleteText}>Delete</Text></Pressable></View>}
         </View>
 
@@ -275,14 +277,18 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   scroll: { flex: 1, backgroundColor: COLORS.canvas },
   content: { padding: 18, paddingBottom: 48, gap: 14 },
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 12 },
+  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 12, minHeight: 54 },
+  headerCenter: { flex: 1, alignItems: "center" },
+  headerIcon: { width: 34, height: 34, alignItems: "center", justifyContent: "center" },
+  headerIconText: { color: COLORS.text, fontSize: 20 },
   overline: { color: COLORS.cyan, fontSize: 10, fontWeight: "900", letterSpacing: 1.3 },
   title: { color: COLORS.text, fontSize: 28, fontWeight: "900", letterSpacing: -0.8, marginTop: 6 },
   meta: { color: COLORS.muted, fontSize: 11, marginTop: 5 },
   liveBadge: { flexDirection: "row", alignItems: "center", borderRadius: 999, borderWidth: 1, borderColor: COLORS.border, paddingHorizontal: 9, paddingVertical: 7 },
   liveDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: COLORS.green, marginRight: 6 },
   liveText: { color: COLORS.green, fontSize: 9, fontWeight: "900", letterSpacing: 0.7 },
-  notice: { flexDirection: "row", alignItems: "flex-start", gap: 9, backgroundColor: "#10192C", borderWidth: 1, borderColor: COLORS.border, borderRadius: 12, padding: 11 },
+  notice: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#10192C", borderWidth: 1, borderColor: COLORS.border, borderRadius: 12, padding: 11 },
+  noticeHint: { color: COLORS.muted, fontSize: 9, marginLeft: "auto" },
   noticeIcon: { color: COLORS.green, fontWeight: "900" },
   noticeText: { flex: 1, color: COLORS.muted, fontSize: 10, lineHeight: 15 },
   transport: { flexDirection: "row", alignItems: "center", gap: 10 },
@@ -317,6 +323,8 @@ const styles = StyleSheet.create({
   beatLane: { flex: 1, flexDirection: "row", alignItems: "center", gap: 4, paddingVertical: 24 },
   beatBlock: { flex: 1, height: 22, borderRadius: 5, backgroundColor: COLORS.raised, borderWidth: 1, borderColor: COLORS.border },
   beatBlockActive: { backgroundColor: "#123B4B", borderColor: COLORS.cyan },
+  emptyLane: { flex: 1, alignItems: "center", justifyContent: "center", borderRadius: 8, borderWidth: 1, borderStyle: "dashed", borderColor: COLORS.border, marginVertical: 12 },
+  emptyLaneText: { color: COLORS.muted, fontSize: 9, fontWeight: "800" },
   clipActions: { flexDirection: "row", alignItems: "center", gap: 7, paddingTop: 11, marginTop: 4 },
   selectedLabel: { color: COLORS.muted, fontSize: 8, fontWeight: "900", marginRight: "auto" },
   actionButton: { backgroundColor: COLORS.raised, borderWidth: 1, borderColor: COLORS.border, borderRadius: 8, paddingHorizontal: 9, paddingVertical: 7 },
