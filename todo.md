@@ -110,6 +110,6 @@
 - [x] Map live saved-session names, BPM, clip counts, durations, and last-edited order into Projects
 - [x] Keep Projects filters, sorting, and Studio/Record navigation aligned with the selected saved session
 - [x] Validate Projects and Record synchronization after reload and session changes
-- [ ] Audit the latest Record session-switching and Projects synchronization changes against the repository state
-- [ ] Commit the complete current Luma Audio state to the public GitHub repository
-- [ ] Verify the pushed remote commit and confirm the linked Vercel deployment is building the same commit
+- [x] Audit the latest Record session-switching and Projects synchronization changes against the repository state
+- [x] Commit the complete current Luma Audio state to the public GitHub repository
+- [x] Verify the pushed remote commit and confirm the linked Vercel deployment is building the same commit
