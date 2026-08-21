@@ -113,3 +113,11 @@
 - [x] Audit the latest Record session-switching and Projects synchronization changes against the repository state
 - [x] Commit the complete current Luma Audio state to the public GitHub repository
 - [x] Verify the pushed remote commit and confirm the linked Vercel deployment is building the same commit
+- [ ] Inspect the live Vercel Projects, New Session, Studio, and Record routes at mobile width
+- [ ] Compare each live route directly against the approved mockup references
+- [ ] Document concrete visual and UX mismatches before editing the implementation
+- [x] Audit web route containers and identify where wide viewport stretching is introduced
+- [x] Add a strict 410px mobile shell for Projects, Record, and Studio on web
+- [x] Tune route spacing, widths, typography, timeline proportions, and bottom navigation to the approved mockups
+- [x] Validate Projects, Record, and Studio at exactly 410px without breaking navigation or audio flows
+- [ ] Push and verify the strict mobile layout deployment
