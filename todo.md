@@ -63,5 +63,5 @@
 - [x] Add real instrumental file selection with supported audio types and import feedback
 - [x] Add imported instrumental state to the shared project timeline and persistence model
 - [x] Validate upload, timeline, responsive layout, lint, tests, and preview behavior
-- [ ] Adopt GitHub-first delivery: synchronize every completed work batch after validation, while retaining managed checkpoints for recovery
-- [ ] Synchronize the current visual and instrumental-import milestone to the public GitHub repository
+- [x] Adopt GitHub-first delivery: synchronize every completed work batch after validation, while retaining managed checkpoints for recovery
+- [x] Synchronize the current visual and instrumental-import milestone to the public GitHub repository
