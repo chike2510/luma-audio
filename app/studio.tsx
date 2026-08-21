@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as DocumentPicker from "expo-document-picker";
 import {
   RecordingPresets,
   createAudioPlayer,
@@ -38,6 +39,7 @@ type Clip = {
   uri: string;
   duration: number;
   waveform: number[];
+  source: "recording" | "instrumental";
 };
 
 type Project = {
@@ -65,6 +67,7 @@ export default function HomeScreen() {
   const [playingClipId, setPlayingClipId] = useState<string | null>(null);
   const [recordStatus, setRecordStatus] = useState<"idle" | "preparing" | "recording" | "finalizing" | "success" | "error">("idle");
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [importStatus, setImportStatus] = useState<"idle" | "picking" | "success" | "error">("idle");
 
   const kick = useAudioPlayer(kickSource);
   const snare = useAudioPlayer(snareSource);
@@ -139,7 +142,7 @@ export default function HomeScreen() {
         const uri = recorder.uri;
         if (!uri) throw new Error("Recording URI unavailable");
         const duration = Math.max(1, Math.round((recorderState.durationMillis ?? 1000) / 1000));
-        const clip: Clip = { id: `take-${Date.now()}`, name: `Take ${project.clips.length + 1}`, uri, duration, waveform: makeWaveform(Date.now() % 20) };
+        const clip: Clip = { id: `take-${Date.now()}`, name: `Take ${project.clips.length + 1}`, uri, duration, waveform: makeWaveform(Date.now() % 20), source: "recording" };
         setProject((current) => ({ ...current, clips: [...current.clips, clip] }));
         setSelectedClipId(clip.id);
         setRecordStatus("success");
@@ -161,6 +164,39 @@ export default function HomeScreen() {
       setRecordStatus("error");
       Alert.alert("Recording unavailable", "Luma Audio could not start or save this take on the device.");
       setTimeout(() => setRecordStatus("idle"), 2200);
+    }
+  };
+
+  const importInstrumental = async () => {
+    try {
+      setImportStatus("picking");
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ["audio/*", "audio/mpeg", "audio/wav", "audio/x-wav", "audio/mp4"],
+        copyToCacheDirectory: true,
+        multiple: false,
+      });
+      if (result.canceled) {
+        setImportStatus("idle");
+        return;
+      }
+      const asset = result.assets[0];
+      if (!asset) throw new Error("No instrumental selected");
+      const clip: Clip = {
+        id: `instrumental-${Date.now()}`,
+        name: asset.name.replace(/\.[^/.]+$/, "") || "Instrumental",
+        uri: asset.uri,
+        duration: 1,
+        waveform: makeWaveform(asset.name.length),
+        source: "instrumental",
+      };
+      setProject((current) => ({ ...current, clips: [...current.clips, clip] }));
+      setSelectedClipId(clip.id);
+      setImportStatus("success");
+      setTimeout(() => setImportStatus("idle"), 2400);
+    } catch {
+      setImportStatus("error");
+      Alert.alert("Instrumental import failed", "Choose an audio file in MP3, WAV, or M4A format and try again.");
+      setTimeout(() => setImportStatus("idle"), 2400);
     }
   };
 
@@ -210,7 +246,7 @@ export default function HomeScreen() {
         <View style={styles.timelineCard}>
           <View style={styles.sectionHeader}><View><Text style={styles.eyebrow}>ARRANGEMENT</Text><Text style={styles.sectionTitle}>One timeline, real sources</Text></View><Text style={styles.timecode}>{project.clips.length ? `${project.clips.reduce((sum, clip) => sum + clip.duration, 0)}s` : "empty"}</Text></View>
           <View style={styles.timelineRuler}>{["1", "2", "3", "4", "5", "6", "7", "8"].map((bar) => <Text key={bar} style={styles.rulerText}>{bar}</Text>)}</View>
-          <View style={styles.lane}><View style={styles.laneLabel}><Text style={styles.laneName}>AUDIO</Text><Text style={styles.laneHint}>{project.clips.length ? `${project.clips.length} take${project.clips.length > 1 ? "s" : ""}` : "No takes yet"}</Text></View><View style={styles.laneContent}>{project.clips.map((clip) => <Pressable key={clip.id} onPress={() => setSelectedClipId(clip.id)} style={[styles.clip, selectedClipId === clip.id && styles.clipSelected]}><Text style={styles.clipName}>{clip.name}</Text><View style={styles.waveform}>{clip.waveform.map((height, index) => <View key={index} style={[styles.waveBar, { height: `${height * 100}%` }]} />)}</View></Pressable>)}</View></View>
+          <View style={styles.lane}><View style={styles.laneLabel}><Text style={styles.laneName}>AUDIO</Text><Text style={styles.laneHint}>{project.clips.length ? `${project.clips.length} take${project.clips.length > 1 ? "s" : ""}` : "No takes yet"}</Text></View><View style={styles.laneContent}>{project.clips.map((clip) => <Pressable key={clip.id} onPress={() => setSelectedClipId(clip.id)} style={[styles.clip, selectedClipId === clip.id && styles.clipSelected]}><Text style={styles.clipName}>{clip.name}</Text><Text style={styles.clipSource}>{clip.source === "instrumental" ? "INSTRUMENTAL" : "TAKE"}</Text><View style={styles.waveform}>{clip.waveform.map((height, index) => <View key={index} style={[styles.waveBar, { height: `${height * 100}%` }]} />)}</View></Pressable>)}</View></View>
           <View style={styles.lane}><View style={styles.laneLabel}><Text style={styles.laneName}>BEAT</Text><Text style={styles.laneHint}>{project.steps.filter(Boolean).length} active steps</Text></View><View style={styles.beatLane}>{project.steps.map((step, index) => <View key={index} style={[styles.beatBlock, step && styles.beatBlockActive]} />)}</View></View>
           {selectedClip && <View style={styles.clipActions}><Text style={styles.selectedLabel}>{selectedClip.name} SELECTED</Text><Pressable onPress={() => playClip(selectedClip)} style={styles.actionButton}><Text style={styles.actionText}>{playingClipId === selectedClip.id ? "Playing" : "Play"}</Text></Pressable><Pressable onPress={trimClip} style={styles.actionButton}><Text style={styles.actionText}>Trim 1s</Text></Pressable><Pressable onPress={deleteClip} style={[styles.actionButton, styles.deleteButton]}><Text style={styles.deleteText}>Delete</Text></Pressable></View>}
         </View>
@@ -220,6 +256,7 @@ export default function HomeScreen() {
           <View style={styles.levelTrack}><View style={[styles.levelFill, { width: isRecording ? "72%" : "18%" }]} /></View>
           <Pressable disabled={recordStatus === "preparing" || recordStatus === "finalizing"} onPress={handleRecord} style={({ pressed }) => [styles.recordButton, isRecording && styles.recordingButton, (recordStatus === "preparing" || recordStatus === "finalizing") && styles.disabledButton, pressed && styles.pressed]}><View style={styles.recordDot} /><Text style={styles.recordText}>{isRecording ? "Stop and add take" : recordStatus === "preparing" ? "Preparing…" : recordStatus === "finalizing" ? "Saving take…" : recordStatus === "success" ? "Record another take" : "Record new take"}</Text></Pressable>
           <Text style={styles.helper}>The take is saved locally on this device and added to the shared timeline when you stop.</Text>
+          <Pressable disabled={importStatus === "picking"} onPress={importInstrumental} style={({ pressed }) => [styles.uploadButton, pressed && styles.pressed, importStatus === "picking" && styles.disabledButton]}><Text style={styles.uploadIcon}>↑</Text><View style={styles.uploadCopy}><Text style={styles.uploadText}>{importStatus === "picking" ? "Choosing instrumental…" : importStatus === "success" ? "Instrumental added to timeline" : "Upload instrumental"}</Text><Text style={styles.uploadMeta}>{importStatus === "success" ? "Ready to select, play, or trim" : "MP3, WAV, or M4A · stored locally"}</Text></View><Text style={styles.uploadChevron}>›</Text></Pressable>
         </View>
 
         <View style={styles.panel}>
@@ -273,7 +310,8 @@ const styles = StyleSheet.create({
   laneContent: { flex: 1, paddingVertical: 12, gap: 7 },
   clip: { minHeight: 50, backgroundColor: "#27124A", borderRadius: 10, borderWidth: 1, borderColor: "#7138B5", padding: 7 },
   clipSelected: { borderColor: COLORS.cyan, borderWidth: 2 },
-  clipName: { color: COLORS.text, fontSize: 9, fontWeight: "900", marginBottom: 5 },
+  clipName: { color: COLORS.text, fontSize: 9, fontWeight: "900", marginBottom: 2 },
+  clipSource: { color: COLORS.cyan, fontSize: 8, fontWeight: "900", letterSpacing: 0.8, marginBottom: 5 },
   waveform: { height: 22, flexDirection: "row", alignItems: "center", gap: 2 },
   waveBar: { flex: 1, minWidth: 2, maxWidth: 5, backgroundColor: COLORS.cyan, borderRadius: 2 },
   beatLane: { flex: 1, flexDirection: "row", alignItems: "center", gap: 4, paddingVertical: 24 },
@@ -292,6 +330,12 @@ const styles = StyleSheet.create({
   recordDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: COLORS.text },
   recordText: { color: COLORS.text, fontSize: 12, fontWeight: "900" },
   helper: { color: COLORS.muted, fontSize: 10, lineHeight: 15, marginTop: 9 },
+  uploadButton: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 12, padding: 12, borderRadius: 12, borderWidth: 1, borderColor: COLORS.cyan, backgroundColor: "#0D2032" },
+  uploadIcon: { color: COLORS.cyan, fontSize: 22, fontWeight: "500" },
+  uploadCopy: { flex: 1 },
+  uploadText: { color: COLORS.text, fontSize: 11, fontWeight: "900" },
+  uploadMeta: { color: COLORS.muted, fontSize: 9, marginTop: 3 },
+  uploadChevron: { color: COLORS.cyan, fontSize: 22 },
   padRow: { flexDirection: "row", gap: 8, marginTop: 16 },
   pad: { flex: 1, borderRadius: 12, paddingVertical: 14, paddingHorizontal: 8, borderWidth: 1 },
   kickPad: { backgroundColor: "#241244", borderColor: COLORS.violet },

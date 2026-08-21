@@ -57,3 +57,11 @@
 - [x] Add exporting loading, success, and reset transitions
 - [x] Validate state feedback across mobile and web flows
 - [x] Synchronize all latest managed-project changes to the public GitHub repository and verify the pushed commit
+- [x] Diagnose why the live Vercel URL still serves the older Luma Audio studio and reconcile it with the latest GitHub commit
+- [x] Improve Home screen hierarchy, spacing, typography, and project-card polish
+- [x] Improve Studio screen hierarchy and make the input/upload area a first-class creation path
+- [x] Add real instrumental file selection with supported audio types and import feedback
+- [x] Add imported instrumental state to the shared project timeline and persistence model
+- [x] Validate upload, timeline, responsive layout, lint, tests, and preview behavior
+- [ ] Adopt GitHub-first delivery: synchronize every completed work batch after validation, while retaining managed checkpoints for recovery
+- [ ] Synchronize the current visual and instrumental-import milestone to the public GitHub repository
