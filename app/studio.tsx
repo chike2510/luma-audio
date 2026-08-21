@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as DocumentPicker from "expo-document-picker";
 import {
@@ -56,6 +57,9 @@ function makeWaveform(seed: number, length = 42) {
 }
 
 export default function HomeScreen() {
+  const router = useRouter();
+  const { name } = useLocalSearchParams<{ name?: string }>();
+  const sessionName = typeof name === "string" && name.length > 0 ? name : "Midnight Bloom";
   const [project, setProject] = useState<Project>(defaultProject);
   const [selectedClipId, setSelectedClipId] = useState<string | null>(null);
   const [isBeatPlaying, setIsBeatPlaying] = useState(false);
@@ -230,7 +234,7 @@ export default function HomeScreen() {
           <Pressable style={styles.headerIcon}><Text style={styles.headerIconText}>‹</Text></Pressable>
           <View style={styles.headerCenter}>
             <Text style={styles.overline}>LUMA AUDIO / STUDIO</Text>
-            <Text style={styles.title}>Midnight Bloom⌄</Text>
+            <Text style={styles.title}>{sessionName}⌄</Text>
             <Text style={styles.meta}>{saveState === "saving" ? "Saving project…" : saveState === "error" ? "Save needs attention" : "Saved locally"} · {project.bpm} BPM · F minor</Text>
           </View>
           <Pressable style={styles.headerIcon}><Text style={styles.headerIconText}>•••</Text></Pressable>
@@ -245,7 +249,7 @@ export default function HomeScreen() {
         </View>
 
         <View style={styles.timelineCard}>
-          <View style={styles.sectionHeader}><View><Text style={styles.eyebrow}>SONG TIMELINE</Text><Text style={styles.sectionTitle}>{project.clips.length ? "Midnight Bloom" : "Timeline"}</Text></View><Text style={styles.timecode}>{project.clips.length ? `${project.clips.reduce((sum, clip) => sum + clip.duration, 0)}s` : "00:00.0"}</Text></View>
+          <View style={styles.sectionHeader}><View><Text style={styles.eyebrow}>SONG TIMELINE</Text><Text style={styles.sectionTitle}>{project.clips.length ? sessionName : "Timeline"}</Text></View><Text style={styles.timecode}>{project.clips.length ? `${project.clips.reduce((sum, clip) => sum + clip.duration, 0)}s` : "00:00.0"}</Text></View>
           <View style={styles.timelineRuler}>{["1", "2", "3", "4", "5", "6", "7", "8"].map((bar) => <Text key={bar} style={styles.rulerText}>{bar}</Text>)}</View>
           <View style={styles.lane}><View style={styles.laneLabel}><Text style={styles.laneName}>AUDIO</Text><Text style={styles.laneHint}>{project.clips.length ? `${project.clips.length} take${project.clips.length > 1 ? "s" : ""}` : "No takes yet"}</Text></View><View style={styles.laneContent}>{project.clips.map((clip) => <Pressable key={clip.id} onPress={() => setSelectedClipId(clip.id)} style={[styles.clip, selectedClipId === clip.id && styles.clipSelected]}><Text style={styles.clipName}>{clip.name}</Text><Text style={styles.clipSource}>{clip.source === "instrumental" ? "INSTRUMENTAL" : "TAKE"}</Text><View style={styles.waveform}>{clip.waveform.map((height, index) => <View key={index} style={[styles.waveBar, { height: `${height * 100}%` }]} />)}</View></Pressable>)}</View></View>
           <View style={styles.lane}><View style={styles.laneLabel}><Text style={styles.laneName}>DRUMS</Text><Text style={styles.laneHint}>Pattern 01</Text></View><View style={styles.beatLane}>{project.steps.map((step, index) => <View key={index} style={[styles.beatBlock, step && styles.beatBlockActive]} />)}</View></View>
@@ -254,7 +258,7 @@ export default function HomeScreen() {
         </View>
 
         <View style={styles.panel}>
-          <View style={styles.sectionHeader}><View><Text style={styles.eyebrow}>RECORD</Text><Text style={styles.sectionTitle}>{isRecording ? "Recording a real take" : recordStatus === "preparing" ? "Preparing microphone" : recordStatus === "finalizing" ? "Saving take" : recordStatus === "success" ? "Take added to timeline" : "Capture audio"}</Text></View><Text style={[styles.inputText, recordStatus === "success" && { color: COLORS.green }]}>{recordStatus === "success" ? "SAVED" : recordStatus === "error" ? "RETRY" : "BUILT-IN MIC"}</Text></View>
+          <View style={styles.sectionHeader}><View><Text style={styles.eyebrow}>RECORD</Text><Text style={styles.sectionTitle}>{isRecording ? "Recording a real take" : recordStatus === "preparing" ? "Preparing microphone" : recordStatus === "finalizing" ? "Saving take" : recordStatus === "success" ? "Take added to timeline" : "Capture audio"}</Text></View><Pressable onPress={() => router.push("/record")}><Text style={[styles.inputText, recordStatus === "success" && { color: COLORS.green }]}>{recordStatus === "success" ? "SAVED" : recordStatus === "error" ? "RETRY" : "OPEN"}</Text></Pressable></View>
           <View style={styles.levelTrack}><View style={[styles.levelFill, { width: isRecording ? "72%" : "18%" }]} /></View>
           <Pressable disabled={recordStatus === "preparing" || recordStatus === "finalizing"} onPress={handleRecord} style={({ pressed }) => [styles.recordButton, isRecording && styles.recordingButton, (recordStatus === "preparing" || recordStatus === "finalizing") && styles.disabledButton, pressed && styles.pressed]}><View style={styles.recordDot} /><Text style={styles.recordText}>{isRecording ? "Stop and add take" : recordStatus === "preparing" ? "Preparing…" : recordStatus === "finalizing" ? "Saving take…" : recordStatus === "success" ? "Record another take" : "Record new take"}</Text></Pressable>
           <Text style={styles.helper}>Saved on this device and added to the timeline when you stop.</Text>

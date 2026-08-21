@@ -82,3 +82,34 @@
 - [x] Refine editor screens to use compact toolbars, grids, meters, and direct manipulation instead of stacked feature cards
 - [x] Validate the visual correction on mobile screenshots and preserve recording/import behavior
 - [x] Commit the visual correction to GitHub and verify the updated Vercel deployment
+
+- [ ] Pause frontend implementation until the screen-by-screen mockup board is approved
+- [ ] Define the mockup sequence for Projects, New Session, Studio, Record, Beat, MIDI, Loops, Mixer, AI, Export, and Settings
+- [ ] Establish one consistent Luma Audio DAW visual system for all mockups
+- [ ] Create and review each screen mockup individually before assembling the final board
+- [ ] Document approved navigation, interaction, and content hierarchy from the mockups
+- [ ] Resume implementation only after mockup approval
+- [ ] Deliver the Projects mockup as a PNG attachment for review
+- [ ] Create Screen 2: New Session mockup using the approved Projects visual direction
+- [ ] Create Screen 3: Studio workspace mockup with the timeline as the primary surface
+- [ ] Enforce strict replication of the approved mockup visual language without adding AI-generated dashboard elements
+- [ ] Create Screen 4: Record mockup using the approved Studio hierarchy and controls
+- [ ] Improve Screen 4 Record mockup with stronger input-meter, record-state, and take-history hierarchy
+- [ ] Create Screen 5 Beat Maker mockup using the corrected Record and Studio visual language
+- [x] Stop generating additional mockup PNGs and use approved Projects, New Session, and Studio mockups as implementation references
+- [x] Implement approved mockup hierarchy, spacing, typography, and interaction states in the live UI
+- [x] Preserve and validate real recording, local persistence, beat playback, and instrumental import behavior
+- [x] Implement approved Record screen layout with input meter, timecode, record control, take history, and import row
+- [x] Wire Record screen controls to existing real recording, local persistence, playback, and instrumental import behavior
+- [x] Validate the Record screen visually and functionally at mobile width
+- [x] Add a locally persisted collection of saved recording sessions with separate clips, imported audio, BPM, and beat state
+- [x] Add a Record-route project switcher with clear selected-session state and create/open behavior
+- [x] Ensure recording, take playback, and instrumental import write only to the selected session
+- [x] Validate switching between sessions and restoring the selected session after reload
+- [x] Connect Projects to the shared saved-session persistence key used by Record
+- [x] Map live saved-session names, BPM, clip counts, durations, and last-edited order into Projects
+- [x] Keep Projects filters, sorting, and Studio/Record navigation aligned with the selected saved session
+- [x] Validate Projects and Record synchronization after reload and session changes
+- [ ] Audit the latest Record session-switching and Projects synchronization changes against the repository state
+- [ ] Commit the complete current Luma Audio state to the public GitHub repository
+- [ ] Verify the pushed remote commit and confirm the linked Vercel deployment is building the same commit
