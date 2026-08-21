@@ -2,16 +2,18 @@ import { Pressable, StyleSheet, Text, View, type PressableProps } from "react-na
 import type { ReactNode } from "react";
 
 export const LUMA = {
-  canvas: "#050816",
-  surface: "#0B1223",
-  raised: "#111A31",
-  border: "#263557",
-  text: "#F8FAFC",
-  muted: "#8B98B5",
-  violet: "#A855F7",
-  cyan: "#22D3EE",
-  green: "#6EE7B7",
-  amber: "#FBBF24",
+  canvas: "#070A12",
+  surface: "#0D1320",
+  raised: "#151D2D",
+  border: "#263249",
+  hairline: "#1B2537",
+  text: "#F4F7FB",
+  muted: "#8C98AA",
+  violet: "#A34BFF",
+  cyan: "#2DD4E8",
+  green: "#72E0B4",
+  amber: "#F2C14E",
+  red: "#FF647D",
 };
 
 export function Eyebrow({ children }: { children: ReactNode }) {
@@ -23,7 +25,7 @@ export function Card({ children, style }: { children: ReactNode; style?: object 
 }
 
 export function Chip({ children, active = false, onPress }: { children: ReactNode; active?: boolean; onPress?: PressableProps["onPress"] }) {
-  return <Pressable onPress={onPress} style={[styles.chip, active && styles.chipActive]}><Text style={[styles.chipText, active && styles.chipTextActive]}>{children}</Text></Pressable>;
+  return <Pressable onPress={onPress} style={({ pressed }) => [styles.chip, active && styles.chipActive, pressed && styles.pressed]}><Text style={[styles.chipText, active && styles.chipTextActive]}>{children}</Text></Pressable>;
 }
 
 export function PrimaryButton({ children, onPress }: { children: ReactNode; onPress?: PressableProps["onPress"] }) {
@@ -35,18 +37,18 @@ export function SectionTitle({ eyebrow, title, detail }: { eyebrow: string; titl
 }
 
 const styles = StyleSheet.create({
-  card: { backgroundColor: LUMA.surface, borderWidth: 1, borderColor: LUMA.border, borderRadius: 18, padding: 16 },
-  eyebrow: { color: LUMA.cyan, fontSize: 9, fontWeight: "900", letterSpacing: 1.2 },
+  card: { backgroundColor: LUMA.surface, borderWidth: 1, borderColor: LUMA.border, borderRadius: 10, padding: 14 },
+  eyebrow: { color: LUMA.cyan, fontSize: 9, fontWeight: "800", letterSpacing: 1.4 },
   sectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 12 },
-  sectionTitle: { color: LUMA.text, fontSize: 18, fontWeight: "900", marginTop: 5, letterSpacing: -0.2 },
-  detail: { color: LUMA.muted, fontSize: 10, fontWeight: "800" },
-  chip: { borderWidth: 1, borderColor: LUMA.border, backgroundColor: LUMA.raised, borderRadius: 999, paddingHorizontal: 11, paddingVertical: 8 },
-  chipActive: { backgroundColor: "#2A1452", borderColor: LUMA.violet },
-  chipText: { color: LUMA.muted, fontSize: 10, fontWeight: "800" },
+  sectionTitle: { color: LUMA.text, fontSize: 17, fontWeight: "800", marginTop: 5, letterSpacing: -0.25 },
+  detail: { color: LUMA.muted, fontSize: 10, fontWeight: "700" },
+  chip: { borderWidth: 1, borderColor: LUMA.border, backgroundColor: "transparent", borderRadius: 7, paddingHorizontal: 10, paddingVertical: 7 },
+  chipActive: { backgroundColor: "#231340", borderColor: LUMA.violet },
+  chipText: { color: LUMA.muted, fontSize: 10, fontWeight: "700" },
   chipTextActive: { color: LUMA.text },
-  primaryButton: { backgroundColor: LUMA.violet, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 13, alignItems: "center" },
-  primaryButtonText: { color: LUMA.text, fontSize: 12, fontWeight: "900" },
-  pressed: { opacity: 0.78, transform: [{ scale: 0.98 }] },
+  primaryButton: { backgroundColor: LUMA.violet, borderRadius: 8, paddingHorizontal: 16, paddingVertical: 12, alignItems: "center" },
+  primaryButtonText: { color: LUMA.text, fontSize: 12, fontWeight: "800" },
+  pressed: { opacity: 0.72 },
 });
 
 export const primitiveStyles = styles;

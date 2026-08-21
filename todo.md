@@ -74,3 +74,11 @@
 - [x] Rebuild the Unified Studio, Recording, Beat, MIDI, Loops, Mixer, AI, Export, and Settings screens to match the board
 - [x] Validate screen-to-screen navigation and responsive visual fidelity against the board
 - [x] Synchronize the corrected Luma Audio build to GitHub and verify the Vercel deployment
+
+- [x] Replace generated-dashboard styling with a disciplined mobile DAW visual system
+- [x] Remove placeholder/AI-sounding copy and make empty states product-specific and concise
+- [x] Tighten Projects screen density, typography, controls, and project-card hierarchy
+- [x] Rework Studio timeline, transport, recording, and upload surfaces around real production workflows
+- [x] Refine editor screens to use compact toolbars, grids, meters, and direct manipulation instead of stacked feature cards
+- [x] Validate the visual correction on mobile screenshots and preserve recording/import behavior
+- [ ] Commit the visual correction to GitHub and verify the updated Vercel deployment

@@ -236,7 +236,7 @@ export default function HomeScreen() {
           <Pressable style={styles.headerIcon}><Text style={styles.headerIconText}>•••</Text></Pressable>
         </View>
 
-        <View style={styles.notice}><Text style={styles.noticeIcon}>●</Text><Text style={styles.noticeText}>REAL AUDIO WORKSPACE</Text><Text style={styles.noticeHint}>Record or upload a source to begin.</Text></View>
+        <View style={styles.notice}><Text style={styles.noticeIcon}>●</Text><Text style={styles.noticeText}>SESSION READY</Text><Text style={styles.noticeHint}>Add a source track to begin.</Text></View>
 
         <View style={styles.transport}>
           <Pressable onPress={() => isBeatPlaying ? stopBeat() : startBeat()} style={({ pressed }) => [styles.transportButton, pressed && styles.pressed]}><Text style={styles.transportIcon}>{isBeatPlaying ? "■" : "▶"}</Text><Text style={styles.transportLabel}>{isBeatPlaying ? "Stop" : "Play beat"}</Text></Pressable>
@@ -245,11 +245,11 @@ export default function HomeScreen() {
         </View>
 
         <View style={styles.timelineCard}>
-          <View style={styles.sectionHeader}><View><Text style={styles.eyebrow}>SONG TIMELINE</Text><Text style={styles.sectionTitle}>{project.clips.length ? "Midnight Bloom" : "One timeline, real sources"}</Text></View><Text style={styles.timecode}>{project.clips.length ? `${project.clips.reduce((sum, clip) => sum + clip.duration, 0)}s` : "00:00.0"}</Text></View>
+          <View style={styles.sectionHeader}><View><Text style={styles.eyebrow}>SONG TIMELINE</Text><Text style={styles.sectionTitle}>{project.clips.length ? "Midnight Bloom" : "Timeline"}</Text></View><Text style={styles.timecode}>{project.clips.length ? `${project.clips.reduce((sum, clip) => sum + clip.duration, 0)}s` : "00:00.0"}</Text></View>
           <View style={styles.timelineRuler}>{["1", "2", "3", "4", "5", "6", "7", "8"].map((bar) => <Text key={bar} style={styles.rulerText}>{bar}</Text>)}</View>
           <View style={styles.lane}><View style={styles.laneLabel}><Text style={styles.laneName}>AUDIO</Text><Text style={styles.laneHint}>{project.clips.length ? `${project.clips.length} take${project.clips.length > 1 ? "s" : ""}` : "No takes yet"}</Text></View><View style={styles.laneContent}>{project.clips.map((clip) => <Pressable key={clip.id} onPress={() => setSelectedClipId(clip.id)} style={[styles.clip, selectedClipId === clip.id && styles.clipSelected]}><Text style={styles.clipName}>{clip.name}</Text><Text style={styles.clipSource}>{clip.source === "instrumental" ? "INSTRUMENTAL" : "TAKE"}</Text><View style={styles.waveform}>{clip.waveform.map((height, index) => <View key={index} style={[styles.waveBar, { height: `${height * 100}%` }]} />)}</View></Pressable>)}</View></View>
           <View style={styles.lane}><View style={styles.laneLabel}><Text style={styles.laneName}>DRUMS</Text><Text style={styles.laneHint}>Pattern 01</Text></View><View style={styles.beatLane}>{project.steps.map((step, index) => <View key={index} style={[styles.beatBlock, step && styles.beatBlockActive]} />)}</View></View>
-          <View style={styles.lane}><View style={styles.laneLabel}><Text style={styles.laneName}>BASS</Text><Text style={styles.laneHint}>MIDI · later</Text></View><View style={styles.emptyLane}><Text style={styles.emptyLaneText}>Add MIDI track</Text></View></View>
+          <View style={styles.lane}><View style={styles.laneLabel}><Text style={styles.laneName}>BASS</Text><Text style={styles.laneHint}>No MIDI track</Text></View><View style={styles.emptyLane}><Text style={styles.emptyLaneText}>Add MIDI track</Text></View></View>
           {selectedClip && <View style={styles.clipActions}><Text style={styles.selectedLabel}>{selectedClip.name} SELECTED</Text><Pressable onPress={() => playClip(selectedClip)} style={styles.actionButton}><Text style={styles.actionText}>{playingClipId === selectedClip.id ? "Playing" : "Play"}</Text></Pressable><Pressable onPress={trimClip} style={styles.actionButton}><Text style={styles.actionText}>Trim 1s</Text></Pressable><Pressable onPress={deleteClip} style={[styles.actionButton, styles.deleteButton]}><Text style={styles.deleteText}>Delete</Text></Pressable></View>}
         </View>
 
@@ -257,18 +257,17 @@ export default function HomeScreen() {
           <View style={styles.sectionHeader}><View><Text style={styles.eyebrow}>RECORD</Text><Text style={styles.sectionTitle}>{isRecording ? "Recording a real take" : recordStatus === "preparing" ? "Preparing microphone" : recordStatus === "finalizing" ? "Saving take" : recordStatus === "success" ? "Take added to timeline" : "Capture audio"}</Text></View><Text style={[styles.inputText, recordStatus === "success" && { color: COLORS.green }]}>{recordStatus === "success" ? "SAVED" : recordStatus === "error" ? "RETRY" : "BUILT-IN MIC"}</Text></View>
           <View style={styles.levelTrack}><View style={[styles.levelFill, { width: isRecording ? "72%" : "18%" }]} /></View>
           <Pressable disabled={recordStatus === "preparing" || recordStatus === "finalizing"} onPress={handleRecord} style={({ pressed }) => [styles.recordButton, isRecording && styles.recordingButton, (recordStatus === "preparing" || recordStatus === "finalizing") && styles.disabledButton, pressed && styles.pressed]}><View style={styles.recordDot} /><Text style={styles.recordText}>{isRecording ? "Stop and add take" : recordStatus === "preparing" ? "Preparing…" : recordStatus === "finalizing" ? "Saving take…" : recordStatus === "success" ? "Record another take" : "Record new take"}</Text></Pressable>
-          <Text style={styles.helper}>The take is saved locally on this device and added to the shared timeline when you stop.</Text>
+          <Text style={styles.helper}>Saved on this device and added to the timeline when you stop.</Text>
           <Pressable disabled={importStatus === "picking"} onPress={importInstrumental} style={({ pressed }) => [styles.uploadButton, pressed && styles.pressed, importStatus === "picking" && styles.disabledButton]}><Text style={styles.uploadIcon}>↑</Text><View style={styles.uploadCopy}><Text style={styles.uploadText}>{importStatus === "picking" ? "Choosing instrumental…" : importStatus === "success" ? "Instrumental added to timeline" : "Upload instrumental"}</Text><Text style={styles.uploadMeta}>{importStatus === "success" ? "Ready to select, play, or trim" : "MP3, WAV, or M4A · stored locally"}</Text></View><Text style={styles.uploadChevron}>›</Text></Pressable>
         </View>
 
         <View style={styles.panel}>
-          <View style={styles.sectionHeader}><View><Text style={styles.eyebrow}>BEAT MAKER</Text><Text style={styles.sectionTitle}>Tap pads, then edit steps</Text></View><Text style={styles.inputText}>AUDIBLE</Text></View>
+          <View style={styles.sectionHeader}><View><Text style={styles.eyebrow}>BEAT MAKER</Text><Text style={styles.sectionTitle}>Pattern 01</Text></View><Text style={styles.inputText}>AUDIBLE</Text></View>
           <View style={styles.padRow}><Pressable onPress={() => playSample("kick")} style={[styles.pad, styles.kickPad]}><Text style={styles.padName}>KICK</Text><Text style={styles.padSub}>Play sound</Text></Pressable><Pressable onPress={() => playSample("snare")} style={[styles.pad, styles.snarePad]}><Text style={styles.padName}>SNARE</Text><Text style={styles.padSub}>Play sound</Text></Pressable><Pressable onPress={() => playSample("hat")} style={[styles.pad, styles.hatPad]}><Text style={styles.padName}>HAT</Text><Text style={styles.padSub}>Play sound</Text></Pressable></View>
           <View style={styles.stepGrid}>{project.steps.map((step, index) => <Pressable key={index} onPress={() => toggleStep(index)} style={[styles.step, step && styles.stepActive]}><Text style={styles.stepNumber}>{index + 1}</Text></Pressable>)}</View>
           <View style={styles.beatFooter}><Text style={styles.helper}>Tap a step to toggle it. Play beat runs the pattern at {project.bpm} BPM.</Text><Pressable onPress={() => setProject((current) => ({ ...current, steps: defaultSteps }))}><Text style={styles.resetText}>Reset</Text></Pressable></View>
         </View>
 
-        <View style={styles.future}><Text style={styles.eyebrow}>NEXT, NOT FAKED</Text><Text style={styles.futureTitle}>MIDI, AI, and mixing come after this loop is solid.</Text><Text style={styles.helper}>They will be added only when they can operate on real project data and audio.</Text></View>
       </ScrollView>
     </ScreenContainer>
   );
@@ -287,21 +286,21 @@ const styles = StyleSheet.create({
   liveBadge: { flexDirection: "row", alignItems: "center", borderRadius: 999, borderWidth: 1, borderColor: COLORS.border, paddingHorizontal: 9, paddingVertical: 7 },
   liveDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: COLORS.green, marginRight: 6 },
   liveText: { color: COLORS.green, fontSize: 9, fontWeight: "900", letterSpacing: 0.7 },
-  notice: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#10192C", borderWidth: 1, borderColor: COLORS.border, borderRadius: 12, padding: 11 },
+  notice: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: "#10192C", borderWidth: 1, borderColor: COLORS.border, borderRadius: 7, padding: 9 },
   noticeHint: { color: COLORS.muted, fontSize: 9, marginLeft: "auto" },
   noticeIcon: { color: COLORS.green, fontWeight: "900" },
   noticeText: { flex: 1, color: COLORS.muted, fontSize: 10, lineHeight: 15 },
   transport: { flexDirection: "row", alignItems: "center", gap: 10 },
-  transportButton: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: COLORS.violet, borderRadius: 12, paddingHorizontal: 15, paddingVertical: 12 },
+  transportButton: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: COLORS.violet, borderRadius: 7, paddingHorizontal: 13, paddingVertical: 10 },
   transportIcon: { color: COLORS.text, fontSize: 15 },
   transportLabel: { color: COLORS.text, fontSize: 11, fontWeight: "900" },
   bpmBlock: { marginLeft: "auto", alignItems: "flex-end" },
   bpmValue: { color: COLORS.text, fontSize: 18, fontWeight: "900" },
   bpmLabel: { color: COLORS.muted, fontSize: 9, fontWeight: "800" },
-  smallButton: { width: 34, height: 34, alignItems: "center", justifyContent: "center", backgroundColor: COLORS.raised, borderRadius: 10, borderWidth: 1, borderColor: COLORS.border },
+  smallButton: { width: 34, height: 34, alignItems: "center", justifyContent: "center", backgroundColor: COLORS.raised, borderRadius: 5, borderWidth: 1, borderColor: COLORS.border },
   smallButtonText: { color: COLORS.text, fontSize: 17 },
-  timelineCard: { backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border, borderRadius: 18, padding: 14 },
-  panel: { backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border, borderRadius: 18, padding: 14 },
+  timelineCard: { backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border, borderRadius: 10, padding: 12 },
+  panel: { backgroundColor: COLORS.surface, borderWidth: 1, borderColor: COLORS.border, borderRadius: 10, padding: 12 },
   sectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 12 },
   eyebrow: { color: COLORS.cyan, fontSize: 9, fontWeight: "900", letterSpacing: 1.1 },
   sectionTitle: { color: COLORS.text, fontSize: 17, fontWeight: "900", marginTop: 4 },
@@ -314,7 +313,7 @@ const styles = StyleSheet.create({
   laneName: { color: COLORS.text, fontSize: 10, fontWeight: "900" },
   laneHint: { color: COLORS.muted, fontSize: 9, marginTop: 4 },
   laneContent: { flex: 1, paddingVertical: 12, gap: 7 },
-  clip: { minHeight: 50, backgroundColor: "#27124A", borderRadius: 10, borderWidth: 1, borderColor: "#7138B5", padding: 7 },
+  clip: { minHeight: 50, backgroundColor: "#27124A", borderRadius: 5, borderWidth: 1, borderColor: "#7138B5", padding: 7 },
   clipSelected: { borderColor: COLORS.cyan, borderWidth: 2 },
   clipName: { color: COLORS.text, fontSize: 9, fontWeight: "900", marginBottom: 2 },
   clipSource: { color: COLORS.cyan, fontSize: 8, fontWeight: "900", letterSpacing: 0.8, marginBottom: 5 },
@@ -323,7 +322,7 @@ const styles = StyleSheet.create({
   beatLane: { flex: 1, flexDirection: "row", alignItems: "center", gap: 4, paddingVertical: 24 },
   beatBlock: { flex: 1, height: 22, borderRadius: 5, backgroundColor: COLORS.raised, borderWidth: 1, borderColor: COLORS.border },
   beatBlockActive: { backgroundColor: "#123B4B", borderColor: COLORS.cyan },
-  emptyLane: { flex: 1, alignItems: "center", justifyContent: "center", borderRadius: 8, borderWidth: 1, borderStyle: "dashed", borderColor: COLORS.border, marginVertical: 12 },
+  emptyLane: { flex: 1, alignItems: "center", justifyContent: "center", borderRadius: 5, borderWidth: 1, borderStyle: "dashed", borderColor: COLORS.border, marginVertical: 12 },
   emptyLaneText: { color: COLORS.muted, fontSize: 9, fontWeight: "800" },
   clipActions: { flexDirection: "row", alignItems: "center", gap: 7, paddingTop: 11, marginTop: 4 },
   selectedLabel: { color: COLORS.muted, fontSize: 8, fontWeight: "900", marginRight: "auto" },
@@ -333,7 +332,7 @@ const styles = StyleSheet.create({
   deleteText: { color: COLORS.red, fontSize: 9, fontWeight: "900" },
   levelTrack: { height: 10, backgroundColor: COLORS.raised, borderRadius: 8, overflow: "hidden", marginTop: 16 },
   levelFill: { height: "100%", backgroundColor: COLORS.cyan, borderRadius: 8 },
-  recordButton: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 9, backgroundColor: COLORS.violet, borderRadius: 12, paddingVertical: 14, marginTop: 14 },
+  recordButton: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 9, backgroundColor: COLORS.violet, borderRadius: 7, paddingVertical: 12, marginTop: 12 },
   recordingButton: { backgroundColor: COLORS.red },
   recordDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: COLORS.text },
   recordText: { color: COLORS.text, fontSize: 12, fontWeight: "900" },
@@ -357,7 +356,7 @@ const styles = StyleSheet.create({
   stepNumber: { color: COLORS.muted, fontSize: 9, fontWeight: "800" },
   beatFooter: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
   resetText: { color: COLORS.cyan, fontSize: 10, fontWeight: "900", marginTop: 9 },
-  future: { borderWidth: 1, borderStyle: "dashed", borderColor: COLORS.border, borderRadius: 16, padding: 14 },
+  future: { borderWidth: 1, borderStyle: "dashed", borderColor: COLORS.border, borderRadius: 9, padding: 12 },
   futureTitle: { color: COLORS.text, fontSize: 16, fontWeight: "900", marginTop: 5 },
   pressed: { opacity: 0.78, transform: [{ scale: 0.98 }] },
   disabledButton: { opacity: 0.58 },
